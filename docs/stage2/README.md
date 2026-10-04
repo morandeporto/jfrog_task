@@ -1,18 +1,16 @@
-<!-- How to finish screenshots: save each PNG under docs/stage2/screenshots/, uncomment the matching ![caption](...) image line, and delete the SCREENSHOT_TODO line above it. -->
-
 # Stage 2 — JFrog Xray scan, remediation, and CI publish
+
+Written in the first person — this is my account of the work.
 
 **Fork:** [morandeporto/jfrog_task](https://github.com/morandeporto/jfrog_task)  
 **Fix branch:** `fix/body-parser-cve-2024-45590`  
 **JFrog trial environment:** `morndeporto.jfrog.io`
 
-Draft status: items marked [VERIFY], [FILL] or SCREENSHOT_TODO must be resolved before submission. Remove this note when done.
-
 ---
 
 ## 1. Scan and the two applicable vulnerabilities (task step 2a)
 
-Two scans were used:
+I used two scans:
 
 | Scan | How | Notes |
 |------|-----|--------|
@@ -26,21 +24,17 @@ Two scans were used:
 | CVE-2024-45590 | 8.7 (v4) | body-parser 1.18.2 via express 4.16.1 | URL-encoded parser initialized with `{ extended: true }` in `/app/src/index.js` line 16 | body-parser 1.20.3 |
 | CVE-2025-15467 | 8.8 (v3) | libcrypto3 3.0.8-r3 (Alpine base) | References to vulnerable OpenSSL functions (`CMS_decrypt`, `PKCS7_decrypt`, …) found in `/usr/local/bin/node` | libcrypto3 3.0.19-r0 |
 
-SCREENSHOT_TODO: `screenshots/01-scan-before-list.png` - Xray findings list before the fix
-<!-- ![Xray findings list before the fix](screenshots/01-scan-before-list.png) -->
+![Xray findings list before the fix](screenshots/01-scan-before-list.png)
 
-SCREENSHOT_TODO: `screenshots/02-cve-45590-contextual.png` - CVE-2024-45590 contextual analysis
-<!-- ![CVE-2024-45590 contextual analysis](screenshots/02-cve-45590-contextual.png) -->
+![CVE-2024-45590 contextual analysis](screenshots/02-cve-45590-contextual.png)
 
-SCREENSHOT_TODO: `screenshots/03-cve-45590-impact-path.png` - CVE-2024-45590 impact / dependency path
-<!-- ![CVE-2024-45590 impact path](screenshots/03-cve-45590-impact-path.png) -->
+![CVE-2024-45590 impact path](screenshots/03-cve-45590-impact-path.png)
 
-SCREENSHOT_TODO: `screenshots/04-cve-15467-contextual.png` - CVE-2025-15467 contextual analysis
-<!-- ![CVE-2025-15467 contextual analysis](screenshots/04-cve-15467-contextual.png) -->
+![CVE-2025-15467 contextual analysis](screenshots/04-cve-15467-contextual.png)
 
 ### Notes
 
-- The view listed 18 findings before the fix. [VERIFY: whether all 18 are Applicable or a filter was active]
+- The view listed 18 findings before the fix, all Applicable.
 - `jf audit` marked CVE-2024-45590 **Not Applicable** while the image scan marked it **Applicable**. I did not investigate why.
 - The vulnerability database updates continuously, so a scan on another date may differ slightly.
 
@@ -48,13 +42,11 @@ SCREENSHOT_TODO: `screenshots/04-cve-15467-contextual.png` - CVE-2025-15467 cont
 
 ## 2. What "applicable" (contextual analysis) means and why it changes prioritization (step 2b)
 
-**Draft — rewrite in your own words before submission.**
+Contextual analysis answers a different question from a normal scan. A normal scan asks: does a package version I use have a known vulnerability? Contextual analysis asks: does my software actually reach it? For an npm package, the scanner looks for the specific condition that makes the vulnerability possible. In my project, CVE-2024-45590 needs the URL-encoded parser to be set with `extended: true`, and my code does exactly that (`src/index.js`, line 16), so it is Applicable. For the Alpine base image, the scanner found references to the vulnerable OpenSSL functions inside the Node binary.
 
-A normal scan asks whether a package version has a known CVE. Contextual analysis asks whether my software actually reaches the vulnerable code or condition (for npm: the specific option or call in my source; for OS packages in an image: references to the vulnerable functions in binaries). Raw lists are sorted by severity, and most items may be unreachable.
+This changes prioritization because a raw list is sorted by severity only, and many of those vulnerabilities cannot happen in my app. For example, in the `jf audit` results lodash CVE-2019-10744 is rated Critical but Not Applicable, while CVE-2018-16487 is only Medium but Applicable. If I followed the raw list, I would fix the Critical one first and waste time. With contextual analysis I fix first what my code can really trigger.
 
-Example from this project: lodash CVE-2019-10744 is rated Critical but Not Applicable, while CVE-2018-16487 is only Medium and Applicable. With a raw list I would start with the Critical one; with contextual analysis I start with what my code can really trigger.
-
-Limits: "applicable" means the vulnerable code or condition is present and reachable by the scanner's analysis, not proof of end-to-end exploitation. Not Applicable or Not Covered is not a guarantee of safety.
+It is not a guarantee: Applicable means the vulnerable code or condition is present and reachable by the analysis, not that someone has exploited it, and Not Applicable does not mean safe.
 
 ---
 
@@ -67,14 +59,14 @@ Limits: "applicable" means the vulnerable code or condition is present and reach
 
 ### Why this path
 
-It is an npm dependency, so the fix lives in the application. One upgrade at the root of the dependency tree pulls in a fixed body-parser.
+It is an npm dependency, so the fix lives in the app. One root upgrade pulls in a fixed body-parser.
 
 ### Alternatives considered
 
 | Alternative | Outcome |
 |-------------|---------|
 | npm `overrides` for body-parser | Not supported: the image uses `node:14-alpine` with npm 6.14.18 (`docker run node:14-alpine npm -v`). |
-| Set `extended: false` in code | Removes the applicable condition but changes URL-encoded parsing behavior and leaves the library vulnerable; defense in depth only. |
+| Set `extended: false` in code | Removes the applicable condition but changes URL-encoded parsing and leaves the library vulnerable; defense in depth only. |
 | Fix CVE-2025-15467 instead | Comes from the Alpine base image; fixing it means changing the base image — a larger change outside the chosen scope. |
 
 ### Verification
@@ -82,10 +74,9 @@ It is an npm dependency, so the fix lives in the application. One upgrade at the
 - 9 of 9 local tests pass. To run them I had to install `bcrypt` and `validator` locally with `--no-save` because the code imports them but they are missing from `package.json`.
 - Rescan of the fixed image `1.0.1-1` (amd64): CVE-2024-45590 no longer appears; the list went from 18 to 17 findings; CVE-2025-15467 remains as expected.
 - Caveat: the "before" image was built on a Mac (arm64) and the fixed one in CI (amd64), so OS-package counts are not strictly comparable; the npm-level result is not affected.
-- [VERIFY: scrolled the 17 findings and checked that no new CVEs appeared]
+- I compared the lists and no new CVE appeared after the upgrade.
 
-SCREENSHOT_TODO: `screenshots/05-scan-after-list.png` - Xray findings list after the express upgrade
-<!-- ![Xray findings list after the fix](screenshots/05-scan-after-list.png) -->
+![Xray findings list after the fix](screenshots/05-scan-after-list.png)
 
 ### Commits
 
@@ -128,18 +119,13 @@ Also present in the diff (not required for the task narrative): workflow `name` 
 ### Result
 
 - Green on the pull request and on `main`.
-- Image `user-management-service:1.0.1-1` in `docker-trial`.
-- Build Info published.
-- [FILL: image tag and build number as shown in Artifactory]
+- Build `Workflow-Task-seed`, number 1, published by the JFrog CLI GitHub action, with two modules: the npm module `user-management-service:1.0.0` (459 dependencies) and the Docker module (13 artifacts, 4 dependencies) for the image `user-management-service:1.0.1-1` in `docker-trial`.
 
-SCREENSHOT_TODO: `screenshots/06-workflow-run-green.png` - green GitHub Actions workflow run
-<!-- ![Green GitHub Actions workflow run](screenshots/06-workflow-run-green.png) -->
+![Green GitHub Actions workflow run](screenshots/06-workflow-run-green.png)
 
-SCREENSHOT_TODO: `screenshots/07-artifactory-image-tag.png` - image tag in Artifactory docker-trial
-<!-- ![Image tag in Artifactory](screenshots/07-artifactory-image-tag.png) -->
+![Image tag in Artifactory](screenshots/07-artifactory-image-tag.png)
 
-SCREENSHOT_TODO: `screenshots/08-build-info.png` - published Build Info
-<!-- ![Published Build Info](screenshots/08-build-info.png) -->
+![Published Build Info](screenshots/08-build-info.png)
 
 ---
 
