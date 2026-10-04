@@ -1,3 +1,5 @@
+**Stage 2 submission:** see [docs/stage2/README.md](docs/stage2/README.md)
+
 # User Management Service
 
 A simple Node.js API service for managing users. This service provides basic CRUD operations for user management with REST endpoints.
