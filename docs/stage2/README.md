@@ -1,6 +1,6 @@
-# Stage 2 — JFrog Xray scan, remediation, and CI publish
+# Stage 2 - JFrog Xray scan, remediation, and CI publish
 
-Written in the first person — this is my account of the work.
+Written in the first person - this is my account of the work.
 
 **Fork:** [morandeporto/jfrog_task](https://github.com/morandeporto/jfrog_task)  
 **Fix branch:** `fix/body-parser-cve-2024-45590`  
@@ -22,7 +22,7 @@ I used two scans:
 | CVE | CVSS | Component | Why applicable | Fixed in |
 |-----|------|-----------|----------------|----------|
 | CVE-2024-45590 | 8.7 (v4) | body-parser 1.18.2 via express 4.16.1 | URL-encoded parser initialized with `{ extended: true }` in `/app/src/index.js` line 16 | body-parser 1.20.3 |
-| CVE-2025-15467 | 8.8 (v3) | libcrypto3 3.0.8-r3 (Alpine base) | References to vulnerable OpenSSL functions (`CMS_decrypt`, `PKCS7_decrypt`, …) found in `/usr/local/bin/node` | libcrypto3 3.0.19-r0 |
+| CVE-2025-15467 | 8.8 (v3) | libcrypto3 3.0.8-r3 (Alpine base) | References to vulnerable OpenSSL functions (`CMS_decrypt`, `PKCS7_decrypt`, ...) found in `/usr/local/bin/node` | libcrypto3 3.0.19-r0 |
 
 ![Xray findings list before the fix](screenshots/01-scan-before-list.png)
 
@@ -54,8 +54,8 @@ It is not a guarantee: Applicable means the vulnerable code or condition is pres
 
 ### Chosen fix
 
-- **CVE-2024-45590**, fixed by upgrading express `4.16.1` → `4.22.3` (exact version, one-line change in `package.json`).
-- Verified with `npm ls body-parser`: `express@4.22.3` → `body-parser@1.20.8`.
+- **CVE-2024-45590**, fixed by upgrading express `4.16.1` to `4.22.3` (exact version, one-line change in `package.json`).
+- Verified with `npm ls body-parser`: `express@4.22.3` to `body-parser@1.20.8`.
 
 ### Why this path
 
@@ -66,14 +66,14 @@ It is an npm dependency, so the fix lives in the app. One root upgrade pulls in 
 | Alternative | Outcome |
 |-------------|---------|
 | npm `overrides` for body-parser | Not supported: the image uses `node:14-alpine` with npm 6.14.18 (`docker run node:14-alpine npm -v`). |
-| Set `extended: false` in code | Removes the applicable condition but changes URL-encoded parsing and leaves the library vulnerable; defense in depth only. |
-| Fix CVE-2025-15467 instead | Comes from the Alpine base image; fixing it means changing the base image — a larger change outside the chosen scope. |
+| Set `extended: false` in code | Removes the applicable condition but changes URL-encoded parsing and leaves the library vulnerable, defense in depth only. |
+| Fix CVE-2025-15467 instead | Comes from the Alpine base image, fixing it means changing the base image - a larger change outside the chosen scope. |
 
 ### Verification
 
 - 9 of 9 local tests pass. To run them I had to install `bcrypt` and `validator` locally with `--no-save` because the code imports them but they are missing from `package.json`.
-- Rescan of the fixed image `1.0.1-1` (amd64): CVE-2024-45590 no longer appears; the list went from 18 to 17 findings; CVE-2025-15467 remains as expected.
-- Caveat: the "before" image was built on a Mac (arm64) and the fixed one in CI (amd64), so OS-package counts are not strictly comparable; the npm-level result is not affected.
+- Rescan of the fixed image `1.0.1-1` (amd64): CVE-2024-45590 no longer appears, the list went from 18 to 17 findings, CVE-2025-15467 remains as expected.
+- Caveat: the "before" image was built on a Mac (arm64) and the fixed one in CI (amd64), so OS-package counts are not strictly comparable, the npm-level result is not affected.
 - I compared the lists and no new CVE appeared after the upgrade.
 
 ![Xray findings list after the fix](screenshots/05-scan-after-list.png)
@@ -106,7 +106,7 @@ Compared to the starter `publish-build.yml` (commit `10fac97`):
 | `platforms: linux/amd64` only | arm64 needs QEMU, which is not configured in this workflow. |
 | Tag `1.0.1-${{ github.run_number }}` in the build step and in `metadata.json` | Build Info must reference the same tag and digest. |
 
-Also present in the diff (not required for the task narrative): workflow `name` changed from `devrel` to `Workflow-Task-seed`; minor OIDC comment wording. The `env.NPM_VIRTUAL_REPO` placeholder in the YAML file was left as-is; the steps resolve the repo via the GitHub Actions variable `vars.NPM_VIRTUAL_REPO`.
+Also present in the diff (not required for the task narrative): workflow `name` changed from `devrel` to `Workflow-Task-seed`, minor OIDC comment wording. The `env.NPM_VIRTUAL_REPO` placeholder in the YAML file was left as-is, the steps resolve the repo via the GitHub Actions variable `vars.NPM_VIRTUAL_REPO`.
 
 ### Setup
 
@@ -114,7 +114,7 @@ Also present in the diff (not required for the task narrative): workflow `name` 
 - GitHub repository variables: `JF_URL` (host only, no `https://`) and `NPM_VIRTUAL_REPO`.
 - OIDC integration: `jfrog-github-oidc` with an identity mapping on repository `morandeporto/jfrog_task`.
 - The repository belongs to a personal account, not a GitHub organization, so JFrog rejected the organization check and I enabled the permissive configuration.
-- Token scope: Admin because this is a throwaway trial; in production use a GitHub organization, least privilege, and no permissive mode.
+- Token scope: Admin because this is a throwaway trial, in production use a GitHub organization, least privilege, and no permissive mode.
 
 ### Result
 
@@ -131,7 +131,7 @@ Also present in the diff (not required for the task narrative): workflow `name` 
 
 ## 5. Problems I ran into
 
-- Manifest list plus attestation entry from a default Docker Desktop build (the attestation shows as a separate Xray artifact with 0 findings; open the platform entry).
+- Manifest list plus attestation entry from a default Docker Desktop build (the attestation shows as a separate Xray artifact with 0 findings, open the platform entry).
 - OIDC "Invalid organization" with a personal repo.
 - Empty `JF_URL` variable causing `https:///...` errors.
 - Repository name must match `NPM_VIRTUAL_REPO` exactly.
@@ -144,7 +144,7 @@ Also present in the diff (not required for the task narrative): workflow `name` 
 - Hard-coded JWT secret in `src/index.js` line 12 (value not shown).
 - `jf audit` SAST: tainted field access in `src/routes/users.js` line 143, and no security middleware.
 - `bcrypt` and `validator` are imported in source but missing from `package.json` (app fails to start and tests fail on a clean install).
-- `node:14-alpine` is an end-of-life Node version; `npm install` in the image also installs devDependencies.
+- `node:14-alpine` is an end-of-life Node version, `npm install` in the image also installs devDependencies.
 
 ---
 
