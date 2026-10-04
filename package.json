@@ -20,7 +20,7 @@
   "author": "Interview Candidate",
   "license": "MIT",
   "dependencies": {
-    "express": "4.16.1",
+    "express": "4.22.3",
     "axios": "0.18.0",
     "lodash": "4.17.4",
     "moment": "2.19.3",
